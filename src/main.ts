@@ -69,10 +69,11 @@ function saveData() {
   fs.writeFileSync(dataFile, JSON.stringify({ activeGroups }))
 }
 
+// We have to keep track where we are invited our selfs ...
 let activeGroups: TelegramBot.Chat[] = data?.activeGroups ?? []
 saveData()
 
-function broadcast(text: string, options?: TelegramBot.SendMessageOptions) {
+function broadcastToGroups(text: string, options?: TelegramBot.SendMessageOptions) {
   for (const group of activeGroups) {
     bot.sendMessage(group.id, text, options)
   }
@@ -115,7 +116,7 @@ bot.onText(/\/echo (.+)/, echo)
 bot.onText(/\/keyboard/, keyboard)
 bot.onText(/\/inline_keyboard/, inlineKeyboard)
 bot.on('callback_query', callbackQuery)
-broadcast('back on line!')
+broadcastToGroups('back online!')
 
 // All events ...
 bot.on('animation', (msg) => {
