@@ -1,6 +1,12 @@
-# Vaccine Alert Bot
+# Telegram bot template with examples
 
-Telegram bot template with examples.
+Using NodeJs, Typescript/JavaScript, Docker.
+
+## Development
+
+- Create `.env` file and add the `TELEGRAM_TOKEN = ...`.
+- Run `npm start`
+- Start a chat with your bot on Telegram
 
 ## Setup
 

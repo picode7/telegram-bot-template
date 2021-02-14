@@ -1,11 +1,19 @@
+import * as fs from 'fs'
+import * as path from 'path'
 require('dotenv').config()
 import TelegramBot = require('node-telegram-bot-api')
+import { log } from './log'
 
 const token = process.env.TELEGRAM_TOKEN
 if (!token) throw 'TELEGRAM_TOKEN is undefined'
 
+const greeting = (msg: TelegramBot.Message) => {
+  bot.sendMessage(msg.chat.id, 'Hello!')
+}
+
 const echo = (msg: TelegramBot.Message, match: RegExpExecArray | null) => {
-  if (msg.text) bot.sendMessage(msg.chat.id, msg.text.trim())
+  if (match == null || typeof match[1] === 'undefined') bot.sendMessage(msg.chat.id, 'echo')
+  else bot.sendMessage(msg.chat.id, match[1].trim())
 }
 
 const keyboard = (msg: TelegramBot.Message) => {
@@ -17,6 +25,7 @@ const keyboard = (msg: TelegramBot.Message) => {
 }
 
 const inlineKeyboard = (msg: TelegramBot.Message) => {
+  // When a button is clicked, it will trigger the callback_query event
   bot.sendMessage(msg.chat.id, 'Please select an action:', {
     reply_markup: {
       inline_keyboard: [
@@ -30,22 +39,9 @@ const inlineKeyboard = (msg: TelegramBot.Message) => {
   })
 }
 
-// Create a bot that uses 'polling' to fetch new updates
-const bot = new TelegramBot(token, { polling: true })
-
-// https://core.telegram.org/bots/api#botcommand
-bot.setMyCommands([
-  { command: 'echo', description: 'Echo Text Sample' },
-  { command: 'keyboard', description: 'Keyboard Sample' },
-  { command: 'inline_keyboard', description: 'Inline Keyboard Sample' },
-])
-bot.onText(/\/echo (.+)/, echo)
-bot.onText(/\/keyboard/, keyboard)
-bot.onText(/\/inline_keyboard/, inlineKeyboard)
-
 // https://core.telegram.org/bots/api#callbackquery
 // https://core.telegram.org/bots/api#answercallbackquery
-bot.on('callback_query', (query) => {
+const callbackQuery = (query: TelegramBot.CallbackQuery) => {
   // check query.inline_message_id if you want make sure it come from a specific message
   if (query.data == 'simple-query') {
     bot.answerCallbackQuery(query.id, { text: 'ok ...' })
@@ -60,4 +56,179 @@ bot.on('callback_query', (query) => {
   } else {
     bot.answerCallbackQuery(query.id)
   }
+}
+
+// Load Saved Data
+const dataFile = 'data/data.json'
+let data: any = null
+try {
+  data = JSON.parse(fs.readFileSync(dataFile, 'utf-8'))
+} catch (e) {}
+function saveData() {
+  fs.mkdirSync(path.dirname(dataFile), { recursive: true })
+  fs.writeFileSync(dataFile, JSON.stringify({ activeChats }))
+}
+
+let activeChats: TelegramBot.Chat[] = data?.activeChats ?? []
+saveData()
+
+// Bot Setup
+const bot = new TelegramBot(token, { polling: true })
+let botUser: TelegramBot.User | undefined
+bot.getMe().then((v) => {
+  botUser = v
+})
+bot.onText(/\/start/, greeting) // triggered joining a private chat (not group)
+bot.on('new_chat_members', (msg) => {
+  if (msg.new_chat_members?.find((v) => v.id == botUser?.id)) greeting(msg)
+}) // triggered when joining a group
+
+bot.setMyCommands([
+  // Shows autocomplete list of commands to the user
+  // https://core.telegram.org/bots/api#botcommand
+  { command: 'echo', description: 'Echo Text Sample' },
+  { command: 'keyboard', description: 'Keyboard Sample' },
+  { command: 'inline_keyboard', description: 'Inline Keyboard Sample' },
+])
+bot.onText(/\/echo/, echo)
+bot.onText(/\/echo (.+)/, echo)
+bot.onText(/\/keyboard/, keyboard)
+bot.onText(/\/inline_keyboard/, inlineKeyboard)
+bot.on('callback_query', callbackQuery)
+
+// All events ...
+bot.on('animation', (msg) => {
+  log('event', 'animation', msg)
+})
+bot.on('audio', (msg) => {
+  log('event', 'audio', msg)
+})
+bot.on('callback_query', (msg) => {
+  log('event', 'callback_query', msg)
+})
+bot.on('channel_chat_created', (msg) => {
+  log('event', 'channel_chat_created', msg)
+})
+bot.on('channel_post', (msg) => {
+  log('event', 'channel_post', msg)
+})
+bot.on('chosen_inline_result', (msg) => {
+  log('event', 'chosen_inline_result', msg)
+})
+bot.on('contact', (msg) => {
+  log('event', 'contact', msg)
+})
+bot.on('delete_chat_photo', (msg) => {
+  log('event', 'delete_chat_photo', msg)
+})
+bot.on('document', (msg) => {
+  log('event', 'document', msg)
+})
+bot.on('edited_channel_post', (msg) => {
+  log('event', 'edited_channel_post', msg)
+})
+bot.on('edited_channel_post_caption', (msg) => {
+  log('event', 'edited_channel_post_caption', msg)
+})
+bot.on('edited_channel_post_text', (msg) => {
+  log('event', 'edited_channel_post_text', msg)
+})
+bot.on('edited_message', (msg) => {
+  log('event', 'edited_message', msg)
+})
+bot.on('edited_message_caption', (msg) => {
+  log('event', 'edited_message_caption', msg)
+})
+bot.on('edited_message_text', (msg) => {
+  log('event', 'edited_message_text', msg)
+})
+bot.on('error', (msg) => {
+  log('event', 'error', msg)
+})
+bot.on('game', (msg) => {
+  log('event', 'game', msg)
+})
+bot.on('group_chat_created', (msg) => {
+  log('event', 'group_chat_created', msg)
+})
+bot.on('inline_query', (msg) => {
+  log('event', 'inline_query', msg)
+})
+bot.on('invoice', (msg) => {
+  log('event', 'invoice', msg)
+})
+bot.on('left_chat_member', (msg) => {
+  // Also triggers when bot is removed from the group
+  // msg.left_chat_member
+  log('event', 'left_chat_member', msg)
+})
+bot.on('location', (msg) => {
+  log('event', 'location', msg)
+})
+bot.on('message', (msg) => {
+  // Triggers for most other events as well
+  log('event', 'message', msg)
+})
+bot.on('migrate_from_chat_id', (msg) => {
+  log('event', 'migrate_from_chat_id', msg)
+})
+bot.on('migrate_to_chat_id', (msg) => {
+  log('event', 'migrate_to_chat_id', msg)
+})
+bot.on('new_chat_members', (msg) => {
+  // Also triggers when bot is added to the group
+  // msg.new_chat_member, msg.new_chat_members
+  log('event', 'new_chat_members', msg)
+})
+bot.on('new_chat_photo', (msg) => {
+  log('event', 'new_chat_photo', msg)
+})
+bot.on('new_chat_title', (msg) => {
+  log('event', 'new_chat_title', msg)
+})
+bot.on('passport_data', (msg) => {
+  log('event', 'passport_data', msg)
+})
+bot.on('photo', (msg) => {
+  log('event', 'photo', msg)
+})
+bot.on('pinned_message', (msg) => {
+  log('event', 'pinned_message', msg)
+})
+bot.on('poll_answer', (msg) => {
+  log('event', 'poll_answer', msg)
+})
+bot.on('polling_error', (msg) => {
+  log('event', 'polling_error', msg)
+})
+bot.on('pre_checkout_query', (msg) => {
+  log('event', 'pre_checkout_query', msg)
+})
+bot.on('shipping_query', (msg) => {
+  log('event', 'shipping_query', msg)
+})
+bot.on('sticker', (msg) => {
+  log('event', 'sticker', msg)
+})
+bot.on('successful_payment', (msg) => {
+  log('event', 'successful_payment', msg)
+})
+bot.on('supergroup_chat_created', (msg) => {
+  log('event', 'supergroup_chat_created', msg)
+})
+bot.on('text', (msg) => {
+  // Triggers like onText
+  log('event', 'text', msg)
+})
+bot.on('video', (msg) => {
+  log('event', 'video', msg)
+})
+bot.on('video_note', (msg) => {
+  log('event', 'video_note', msg)
+})
+bot.on('voice', (msg) => {
+  log('event', 'voice', msg)
+})
+bot.on('webhook_error', (msg) => {
+  log('event', 'webhook_error', msg)
 })
