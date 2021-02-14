@@ -66,11 +66,17 @@ try {
 } catch (e) {}
 function saveData() {
   fs.mkdirSync(path.dirname(dataFile), { recursive: true })
-  fs.writeFileSync(dataFile, JSON.stringify({ activeChats }))
+  fs.writeFileSync(dataFile, JSON.stringify({ activeGroups }))
 }
 
-let activeChats: TelegramBot.Chat[] = data?.activeChats ?? []
+let activeGroups: TelegramBot.Chat[] = data?.activeGroups ?? []
 saveData()
+
+function broadcast(text: string, options?: TelegramBot.SendMessageOptions) {
+  for (const group of activeGroups) {
+    bot.sendMessage(group.id, text, options)
+  }
+}
 
 // Bot Setup
 const bot = new TelegramBot(token, { polling: true })
@@ -80,8 +86,22 @@ bot.getMe().then((v) => {
 })
 bot.onText(/\/start/, greeting) // triggered joining a private chat (not group)
 bot.on('new_chat_members', (msg) => {
-  if (msg.new_chat_members?.find((v) => v.id == botUser?.id)) greeting(msg)
+  if (msg.new_chat_members?.find((v) => v.id == botUser?.id)) {
+    greeting(msg)
+    activeGroups.push(msg.chat)
+    saveData()
+  }
 }) // triggered when joining a group
+bot.on('left_chat_member', (msg) => {
+  // When bot leaves group
+  if (msg.new_chat_members?.find((v) => v.id == botUser?.id)) {
+    const index = activeGroups.findIndex((v) => {
+      v.id === msg.chat.id
+    })
+    activeGroups.splice(index, 1)
+    saveData()
+  }
+})
 
 bot.setMyCommands([
   // Shows autocomplete list of commands to the user
@@ -95,6 +115,7 @@ bot.onText(/\/echo (.+)/, echo)
 bot.onText(/\/keyboard/, keyboard)
 bot.onText(/\/inline_keyboard/, inlineKeyboard)
 bot.on('callback_query', callbackQuery)
+broadcast('back on line!')
 
 // All events ...
 bot.on('animation', (msg) => {
