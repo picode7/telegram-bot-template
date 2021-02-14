@@ -1,4 +1,4 @@
-# Telegram bot template with examples
+# Telegram Bot Template with Examples
 
 Using NodeJs, Typescript/JavaScript, Docker.
 
